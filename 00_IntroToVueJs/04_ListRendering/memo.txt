@@ -1,0 +1,198 @@
+= リストの表示(List Rendering) =
+<code>v-for</code> を使ったリストのレンダリングを勉強します。
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="product">
+
+      <div class="product-image">
+        <img :src="image">
+      </div>
+
+      <div class="product-info">
+        <h1>{{ product }}</h1>
+        <p v-if="inStock">In Stock</p>
+        <p v-else>Out of Stock</p>
+      </div>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+var app = new Vue({
+  el: '#app',
+  data: {
+    product: 'Socks',
+    image: './assets/vmSocks-green.jpg',
+    inStock: true,
+    details: ["80% cotton", "20% polyester", "Gender-neutral"]
+  },
+});
+</syntaxhighlight>
+
+== details をリスト表示する ==
+<code>v-for</code> と<code><ul></code> タグを使ってdetail をリスト表示します。
+
+* index.html
+<syntaxhighlight lang="html">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+         <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
++        <ul>
++          <li v-for="detail in details">{{ detail }}</li>
++        </ul>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+[[Image:04_ListRendering0001.png]]
+
+== オブジェクトが格納された配列の、特定な属性の値のみを取得して表示する ==
+<code>v-for</code> ではオブジェクトの特定の属性の値のみを選んで表示させることもできます。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+     inStock: true,
+-    details: ["80% cotton", "20% polyester", "Gender-neutral"]
++    details: ["80% cotton", "20% polyester", "Gender-neutral"],
++    variants: [
++      { variantId: 2234, variantColor: "green" },
++      { variantId: 2235, variantColor: "blue" }
++    ]
+   },
+ });
+</syntaxhighlight>
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+         <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
++        <div v-for="variant in variants">
++          <p>{{ variant.variantColor }}</p>
++        </div>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+[[Image:04_ListRendering0002.png]]
+
+すると種類(variant) の色情報のみを選んで表示させることができるようになりました。
+
+== Vue がトラッキングできるようにID 情報を付与する ==
+上記の対応で表記は問題ありませんが<code>v-for</code> を使って要素を描画した時、Vue がトラッキングできるように<code>v-bind:key(v-bind の記載は省略可)</code> を使ってID 情報を付与することを推奨します。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+         <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+-        <div v-for="variant in variants">
++        <div v-for="variant in variants" :key="variant.variantId">
+           <p>{{ variant.variantColor }}</p>
+         </div>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+上記のようにするとVue は(HTML 上の要素に値を加えたりはしませんが)リストの順番等が変わっても要素の同一性を認識できるようになり、適宜要素の入れ替え等をしてくれるようになります。
+
+; Vue.js - key
+: https://vuejs.org/v2/guide/list.html#key
+
+= 参考 =
+; List Rendering
+: https://www.vuemastery.com/courses/intro-to-vue-js/list-rendering
+

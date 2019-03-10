@@ -1,0 +1,341 @@
+= 開始ポイント =
+条件付きレンダリングのサンプルを実行する前に、開始ポイントのソースコードを示します。
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="product">
+
+      <div class="product-image">
+        <img :src="image">
+      </div>
+
+      <div class="product-info">
+        {{ image }}
+        <h1>{{ product }}</h1>
+      </div>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+var app = new Vue({
+  el: '#app',
+  data: {
+    product: 'Socks',
+    image: './assets/vmSocks-blue.jpg'
+  },
+});
+</syntaxhighlight>
+
+= 条件付きレンダリング(Conditional Rendering) =
+商品が<code>In Stock</code> か<code>Out Of Stock</code> かで表示を変える方法について勉強していきたいと思います。<br />
+
+まずは条件分岐を気にせずに<code>In Stock</code> か<code>Out Of Stock</code> の両方を表示するようにしてみましょう。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+         <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         {{ image }}
+         <h1>{{ product }}</h1>
++        <p>In Stock</p>
++        <p>Out of Stock</p>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+ </syntaxhighlight>
+ 
+ * main.js
+ <syntaxhighlight lang="javascript">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-blue.jpg'
+   },
+ });
+</syntaxhighlight>
+
+[[Image:03_ConditonalRendering_0001.png]]
+
+== 条件によって表示を変える ==
+上記の状態でWeb 画面を表示すると<code>In Stock</code> と<code>Out of Stock</code> の両方が表示される用になっているはずです。
+これを、商品の在庫がある場合は<code>In Stock</code> と表示し、在庫がない場合は<code>Out of Stock</code> と表示する表に条件分岐で表示する内容を変えるように処理を実装したいと思います。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+         <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         {{ image }}
+         <h1>{{ product }}</h1>
+-        <p>In Stock</p>
+-        <p>Out of Stock</p>
++        <p v-if="inStock">In Stock</p>
++        <p v-else>Out of Stock</p>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+ </syntaxhighlight>
+ 
+ * main.js
+ <syntaxhighlight lang="javascript">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-blue.jpg'
+   },
+ });
+</syntaxhighlight>
+
+JavaScript 側には以下のように、在庫がtrue である情報を記載します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
++    inStock: true
+   },
+ });
+</syntaxhighlight>
+
+上記のように編集したら、ブラウザの画面を更新してみましょう。
+画面の情報表示エリアには<code>In Stock</code> と表示されることでしょう。
+
+[[Image:03_ConditonalRendering_0002.png]]
+
+== In Stock の値をfalse に変えてみる ==
+In Stock の値を<code>false</code> に変えてみましょう。すると次のようになります。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+-    inStock: true
++    inStock: false
+   },
+ });
+</syntaxhighlight>
+
+この状態でブラウザを更新してみましょう。
+すると表示が<code>Out of Stock</code> になることが確認できると思います。
+
+[[Image:03_ConditonalRendering_0003.png]]
+
+== 複雑な条件分岐を記載してみる ==
+表示の分岐条件として、以下のような複雑な条件分岐も実装することができます。
+
+* 在庫が11 個以上の場合は"In Stock" と表示する
+* 在庫が10 個以下〜1 個以上の場合は"Almost sold out!" と表示する
+* 在庫が0 個の場合は"Out of Stock" と表示する
+
+これをVue で実装することにしてみましょう。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+         <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+-        <p v-if="inStock">In Stock</p>
++        <p v-if="inventory > 10"></p>
++        <p v-else-if="inventory <= 10 && inventory > 0">Almost sold out!</p>
+         <p v-else>Out of Stock</p>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+そして<code>main.js</code> で在庫を変更してみましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+-    inStock: false
++    inventory: 8
+   },
+ });
+</syntaxhighlight>
+
+上記の状態で画面を更新して表示を確認してみましょう。
+
+[[Image:03_ConditonalRendering_0004.png]]
+
+すると画面に<code>Almost sold out!</code> と表示されることでしょう。
+
+== 在庫が0 件の時にOut of Stock と表示されることを確認する ==
+<code>main.js</code> 内の<code>inventyro</code> を0 に設定しましょう。
+すると画面の表示が<code>Out of stock!</code> と成るはずです。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+-    inventory: 8
++    inventory: 0
+   },
+ });
+</syntaxhighlight>
+
+[[Image:03_ConditonalRendering_0005.png]]
+
+== 条件を満たすときだけ表示する(v-show) ==
+条件を満たすときだけ表示したい場合は<code>v-show</code> を使います。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+         <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+-        <p v-if="inventory > 10"></p>
+-        <p v-else-if="inventory <= 10 && inventory > 0">Almost sold out!</p>
+-        <p v-else>Out of Stock</p>
++        <p v-show="inStock">In Stock</p>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+-    inventory: 0
++    inStock: true
+   },
+ });
+</syntaxhighlight>
+
+[[Image:03_ConditonalRendering_0006.png]]
+
+上記の状態でWeb 画面を表示すると<code>In Stock</code> という文字が表示されます。
+次は<code>main.js</code> 内の<code>inStock</code> をfalse に変更します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+-    inStock: true
++    inStock: false
+   },
+ });
+</syntaxhighlight>
+
+[[Image:03_ConditonalRendering_0007.png]]
+
+Web 画面を更新すると<code>In Stock</code> という文字が消えています。
+どうなっているのか確認すると、要素にhidden 属性が追加されて<code>In Stock</code> という文字が表示されなくなっていることが確認できます。
+
+= 参考 =
+; Conditional Rendering
+: https://www.vuemastery.com/courses/intro-to-vue-js/conditional-rendering
+

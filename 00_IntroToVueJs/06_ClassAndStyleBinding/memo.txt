@@ -1,0 +1,390 @@
+= Class and Style Binding =
+ここでは動的にスタイルを適用する方法について学んでいきます。
+
+== スタートポイント ==
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="product">
+
+      <div class="product-image">
+        <img :src="image">
+      </div>
+
+      <div class="product-info">
+        <h1>{{ product }}</h1>
+        <p v-if="inStock">In Stock</p>
+        <p v-else>Out of Stock</p>
+        <ul>
+          <li v-for="detail in details">{{ detail }}</li>
+        </ul>
+        <div v-for="variant in variants" :key="variant.variantId">
+          <p @mouseover="updateProduct(variant.variantImage)">
+            {{ variant.variantColor }}
+          </p>
+        </div>
+
+        <button v-on:click="addToCart">Add to Cart</button>
+        <div class="cart">
+          <p>Cart({{ cart }})</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+var app = new Vue({
+  el: '#app',
+  data: {
+    product: 'Socks',
+    image: './assets/vmSocks-green.jpg',
+    inStock: true,
+    details: ["80% cotton", "20% polyester", "Gender-neutral"],
+    variants: [
+      {
+        variantId: 2234,
+        variantColor: "green",
+        variantImage: "./assets/vmSocks-green.jpg"
+      },
+      {
+        variantId: 2235,
+        variantColor: "blue",
+        variantImage: "./assets/vmSocks-blue.jpg"
+      }
+    ],
+    cart: 0
+  },
+  methods: {
+    addToCart() {
+      this.cart += 1;
+    },
+    updateProduct(variantImage) {
+      this.image = variantImage
+    }
+  }
+});
+</syntaxhighlight>
+
+== style を動的に適用する ==
+色の指定をする箇所を以下のように変更します。
+<code>class</code>, <code>v-bind:style</code>, <code>v-on:mouseover</code> を加えます。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+-        <div v-for="variant in variants" :key="variant.variantId">
+-          <p @mouseover="updateProduct(variant.variantImage)">
+-            {{ variant.variantColor }}
+-          </p>
++        <div v-for="variant in variants"
++          :key="variant.variantId"
++          class="color-box"
++          :style="{ backgroundColor: variant.variantColor }"
++          @mouseover="updateProduct(variant.variantImage)">
+         </div>
+
+         <button v-on:click="addToCart">Add to Cart</button>
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+[[Image:06_ClassStyleBinding0001.png]]
+
+* <code>class</code> 属性は純粋にstyle.css からcolor-box クラスの値を取得しています。
+* <code>:style</code> はmain.js の<code>variant.variantColor</code> から値(green/blue)を取得し、backgroundColor に値を適用しています
+
+== style バインディングの例(シンプルなスタイルを適用する) ==
+style バインディングの書き方の例として以下のようなものがあります。
+
+* 例1) Vue インスタンスのdata.color からcss のcolor に適用する(red にする)
+<syntaxhighlight lang="html">
+<h1 :style="{ color: color }">...</h1>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    color: 'red'
+  }
+</syntaxhighlight>
+
+スタイルを適用する場合は<code>{ }</code> 括弧を使用します。
+
+* 例2) Vue インスタンスのdata.fontSize からcss のfont-size に適用する(13px にする)
+<syntaxhighlight lang="html">
+<p style="font-size: 13px">...</p>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    color: 'red',
+    fontSize: '13px'
+  }
+</syntaxhighlight>
+
+== style バインディングの例(クラススタイルを適用する) ==
+クラスをstyle としてバインドすることもできます。
+
+* 例3) Vue インスタンスのstyleObject オブジェクトを適用する(color: red, font-size: 13px)
+<syntaxhighlight lang="html">
+<span style="styleObject">...</p>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    styleObject: {
+      color: 'red',
+      fontSize: '13px'
+    }
+  }
+</syntaxhighlight>
+
+TODO: Vue インスタンス内では<code>fontSize</code> と書いているが、展開される時は自動的に<code>font-size</code> となるのか？
+
+* 例4) Vue インスタンスの複数オブジェクトを適用する
+<syntaxhighlight lang="html">
+<p :style="[styleObject, styleObject2]">...</p>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    styleObject: {
+      color: 'red',
+      fontSize: '13px'
+    },
+    styleObject2: {
+      margin: '5px',
+      padding: '20px'
+    }
+  }
+</syntaxhighlight>
+
+配列のように書くことで複数オブジェクトを適用することができる。
+
+== Stock の状態に応じてボタンを活性 or 非活性にする ==
+Stock の状況に応じてボタンの<code>:disabled</code>、<code>:class</code> 状態を動的に変更するサンプルを見ていきましょう。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+         <div v-for="variant in variants"
+           :key="variant.variantId"
+           class="color-box"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(variant.variantImage)">
+         </div>
+
+-        <button v-on:click="addToCart">Add to Cart</button>
++        <button v-on:click="addToCart"
++          :disabled="!inStock"
++          :class="{ disabledButton: !inStock }">Add to Cart</button>
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+そしてStock 状態をfalse にしてみましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+-    inStock: true,
++    inStock: false,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+       {
+         variantId: 2234,
+         variantColor: "green",
+         variantImage: "./assets/vmSocks-green.jpg"
+       },
+       {
+         variantId: 2235,
+         variantColor: "blue",
+         variantImage: "./assets/vmSocks-blue.jpg"
+       }
+     ],
+     cart: 0
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+     updateProduct(variantImage) {
+       this.image = variantImage
+     }
+   }
+ });
+</syntaxhighlight>
+
+[[Image:06_ClassStyleBinding0003.png]]
+
+ボタンが非活性になりました。
+
+== コンソールから動的にStock 状態を変更してみる ==
+ブラウザのコンソールを開き、以下のようにStock 状態を動的に変更してみてください。
+
+<syntaxhighlgiht lang="text">
+> app.inStork = true;
+</syntaxhighlight>
+
+するとボタンが活性化されるのが確認できると思います。
+
+[[Image:06_ClassStyleBinding0004.png]]
+
+== Class バインディングのその他の例 ==
+Class バインディングを条件分岐させることも簡単にできます。
+
+* 例1) active クラス、text-danger クラスをフラグの状態によって適用する
+<syntaxhighlight lang="html">
+<div class="color-box"
+    :class=="{ active: activeClass, 'text-danger': errorClass }"></div>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    activeClass: true,
+    errorClass:  false
+  }
+</syntaxhighlight>
+
+* 例2) デフォルトのクラスを設定する(color-box, active)
+<syntaxhighlight lang="html">
+<div class="color-box active">...</div>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    activeClass: true,
+    errorClass:  false
+  }
+</syntaxhighlight>
+
+TODO: 上記はJavaScript の値に関係なくcolor-box, active 食らうsが適用される。
+
+* 例3) クラス全体を指定する
+<syntaxhighlight lang="html">
+<div :class="classObject">...</div>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    classObject: {
+      active: true,
+      'text-danger': false
+    }
+  }
+</syntaxhighlight>
+
+上記の例では<code>classObject</code> クラスを適用していますが、その中の<code>active</code> クラスだけが有効となっている状態。
+
+* 例4) 複数のクラスを指定する
+<syntaxhighlight lang="html">
+<div :class="[activeClass, errorclass]">...</div>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    activeClass: 'active',
+    errorClass: 'text-danger'
+  }
+</syntaxhighlight>
+
+<code>activeClass(active)</code>, <code>errorClass(text-danger)</code> の両方が指定されている状態。
+
+* 例5) 条件分岐で適用するクラスを指定する
+<syntaxhighlight lang="html">
+<div :class="[isActive ? activeClass : '']">...</div>
+</syntaxhighlight>
+
+<syntaxhighlight lang="javascript">
+  data: {
+    isActive: true,
+    activeClass: 'active'
+  }
+</syntaxhighlight>
+
+<code>isActive</code> がtrue の場合のみ<code>activeClass</code> を適用する。
+
+
+= 参考 =
+; Class & Style Binding
+: https://www.vuemastery.com/courses/intro-to-vue-js/class-&-style-binding
+

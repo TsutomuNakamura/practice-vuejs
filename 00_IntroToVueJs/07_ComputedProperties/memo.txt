@@ -1,0 +1,411 @@
+= Computed Properties =
+Vue インスタンス上の蓄えられたデータではなく、計算された値を使う方法について学んでいきます。
+
+== スタートポイント ==
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="product">
+
+      <div class="product-image">
+        <img :src="image">
+      </div>
+
+      <div class="product-info">
+        <h1>{{ product }}</h1>
+
+        <p v-if="inStock">In Stock</p>
+        <p v-else>Out of Stock</p>
+
+        <ul>
+          <li v-for="detail in details">{{ detail }}</li>
+        </ul>
+
+        <div v-for="variant in variants"
+          class="color-box"
+          :key="variant.variantId"
+          :style="{ backgroundColor: variant.variantColor }"
+          @mouseover="updateProduct(variant.variantImage)">
+        </div>
+
+        <button v-on:click="addToCart"
+          :disabled="!inStock"
+          :class="{ disabledButton: !inStock }">Add to Cart</button>
+
+        <div class="cart">
+          <p>Cart({{ cart }})</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+var app = new Vue({
+  el: '#app',
+  data: {
+    product: 'Socks',
+    brand: 'Vue Mastery',
+    image: './assets/vmSocks-green.jpg',
+    inStock: true,
+    details: ["80% cotton", "20% polyester", "Gender-neutral"],
+    variants: [
+      {
+        variantId: 2234,
+        variantColor: "green",
+        variantImage: "./assets/vmSocks-green.jpg",
+        variantQuantity: 10
+      },
+      {
+        variantId: 2235,
+        variantColor: "blue",
+        variantImage: "./assets/vmSocks-blue.jpg",
+        variantQuantity: 0
+      }
+    ],
+    cart: 0
+  },
+  methods: {
+    addToCart() {
+      this.cart += 1;
+    },
+    updateProduct(variantImage) {
+      this.image = variantImage
+    }
+  }
+});
+</syntaxhighlight>
+
+※前回から<code>brand: 'Vue Mastery'</code>, <code>variantQuantity</code> が追加されている。
+
+[[Image:07_ComputedProperties0001.png]]
+
+== タイトルを動的に結合して表示する ==
+'Socks' と表示されているタイトル部分を、動的に文字列を連結させて表示させるようにしましょう。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+-        <h1>{{ product }}</h1>
++        <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="variant in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(variant.variantImage)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart</button>
+
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+※<code>{{ title }}</code> と描いた部分は<code>{{ brand }} {{ product }}</code> と書いても事足りますが、今回はcomputed で処理をします
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     brand: 'Vue Mastery',
+     image: './assets/vmSocks-green.jpg',
+     inStock: true,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+       {
+         variantId: 2234,
+         variantColor: "green",
+         variantImage: "./assets/vmSocks-green.jpg",
+        variantQuantity: 10
+       },
+       {
+         variantId: 2235,
+         variantColor: "blue",
+         variantImage: "./assets/vmSocks-blue.jpg",
+        variantQuantity: 0
+       }
+     ],
+     cart: 0
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+     updateProduct(variantImage) {
+       this.image = variantImage
+     }
++  },
++  computed: {
++    title() {
++      return this.brand + ' ' + this.product;
++    }
+   }
+ });
+</syntaxhighlight>
+
+<code>computed:</code> プロパティを追加します。
+この状態で画面を開いてみましょう。
+
+[[Image:07_ComputedProperties0002.png]]
+
+すると、タイトルがcomputed で処理され、その結果である<code>Vue Mastery Socks</code> という文字列で表示されています。
+
+== 動的に商品名を変えてみる ==
+もちろんこの<code>computed</code> Reactative なのでブラウザのコンソールから変更してリアルタイムに表示を変更することができます。
+
+* console
+<syntaxhighlight lang="text">
+> app.brand = "Vue Masterful";
+> app.product = "Boots";
+</syntaxhighlight>
+
+[[Image:07_ComputedProperties0003.png]]
+
+== 画像の指定をcomputed で指定する ==
+既に靴下の画像選択する機能については実装済みですが、これを<code>computed</code> で行うようにリファクタリングしてみましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     brand: 'Vue Mastery',
+-    image: './assets/vmSocks-green.jpg',
++    selectedVariant: 0,
+     inStock: true,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+       {
+         variantId: 2234,
+         variantColor: "green",
+         variantImage: "./assets/vmSocks-green.jpg",
+        variantQuantity: 10
+       },
+       {
+         variantId: 2235,
+         variantColor: "blue",
+         variantImage: "./assets/vmSocks-blue.jpg",
+        variantQuantity: 0
+       }
+     ],
+     cart: 0
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+-    updateProduct(variantImage) {
+-      this.image = variantImage
++    updateProduct(index) {
++      this.selectedVariant = index;
++      console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
++    },
++    image() {
++      return this.variants[this.selectedVariant].variantImage;
+     }
+   }
+ });
+</syntaxhighlight>
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+-        <div v-for="variant in variants"
++        <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+-          @mouseover="updateProduct(variant.variantImage)">
++          @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart</button>
+
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+上記の<code>index.html</code> 内の...
+
+<syntaxhighlight lang="html">
+    ......
+    <div v-for="(variant, index) in variants" ...
+</syntaxhighlight>
+
+上記のようにすることで、<code>variant</code> オブジェクトだけでなく、<code>index</code> にインデックス情報も一緒に取ることができるようになります。<br />
+また、updateProduct にはindex 情報を引数として渡すように変更します。<br /><br />
+
+<syntaxhighlight lang="html">
+        ......
+        @mouseover="updateProduct(index)">
+        ......
+</syntaxhighlight>
+
+そして、最後に<code>v-bind</code> で画像表示するを指定している箇所であった…
+<syntaxhighlight lang="html">
+      ......
+      <div class="product-image">
+        <img :src="image">
+      </div>
+      ......
+</syntaxhighlight>
+の<code>image</code> computed メソッドを忘れずに実装するようにしましょう。<br /><br />
+
+ここでWeb 画面を確認してみましょう。
+
+[[Image:07_ComputedProperties0004.png]]
+
+コンソールにも出ているように、インデックス情報から画像を選択して表示されていることがわかります。
+
+== 在庫状況に応じてStock の文字列と、ボタンの活性化状態を変更する ==
+追加されたデータ<code>variantQuantity</code> を使い、在庫状態に応じてStock の表示とボタンの活性、非活性をリアルタイムに変更してみましょう。<br />
+html 側は既に<code>inStock</code> の状態を見てStock の表示とボタンの活性状態を変更するようにできているので、<code>inStock</code> computed を使って動的に変更していきます。
+
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     brand: 'Vue Mastery',
+     selectedVariant: 0,
+-    inStock: true,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+       {
+         variantId: 2234,
+         variantColor: "green",
+         variantImage: "./assets/vmSocks-green.jpg",
+         variantQuantity: 10
+       },
+       {
+         variantId: 2235,
+         variantColor: "blue",
+         variantImage: "./assets/vmSocks-blue.jpg",
+         variantQuantity: 0
+       }
+     ],
+     cart: 0
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
++    },
++    inStock() {
++      return this.variants[this.selectedVariant].variantQuantity;
+     }
+   }
+ });
+</syntaxhighlight>
+
+[[Image:07_ComputedProperties0005.png]]
+[[Image:07_ComputedProperties0006.png]]
+
+それぞれの色にマウスオーバーした時にStock の表示が変わること、ボタンの活性状態が変わることが確認できます。
+
+
+= 参考 =
+; Computed Properties
+: https://www.vuemastery.com/courses/intro-to-vue-js/computed-properties

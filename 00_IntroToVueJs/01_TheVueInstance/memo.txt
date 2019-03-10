@@ -1,0 +1,125 @@
+= Vue インスタンス =
+Vue インスタンスについて理解する。
+レッスン開始のソースコードは以下の通り。
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+</head>
+<body>
+  <div id="app">
+    <h1>Product goes here</h1>
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+var product = "Socks";
+</syntaxhighlight>
+
+== Vue.js devtools ==
+必要に応じてVue.js devtools をGoogle Chrome に入れる。
+
+; Vue.js devtools
+https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd
+
+== script 要素にVue をインポートする ==
+
+; Vue.js - Introduction
+: https://vuejs.org/v2/guide/
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ </head>
+ <body>
+   <div id="app">
+     <h1>Product goes here</h1>
+   </div>
++  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+== 要素に値を入れる ==
+<code><div id="app">...</div></code> のところにデータを挿入してみましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+-var product = "Socks";
++new app = new Vue({
++  el: '#app',
++  data: {
++    product: "Socks"
++  }
++});
+</syntaxhighlight>
+
+html には以下のように括弧を使ってVue がレンダリングできるように変数を定義します。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ </head>
+ <body>
+   <div id="app">
+-    <h1>Product goes here</h1>
++    <h1>{{ product }}</h1>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+上記の変更をしたらブラウザを更新してみましょう。
+Socks が表示されるはずです。
+
+== カッコ内の記法について ==
+カッコ内はJavaScript 的に記述することができます。
+例えば以下のようにhtml ファイルを変更してどのように表示が変わるかを見てみましょう。
+
+* index.html
+<syntaxhighlight lang="html">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ </head>
+ <body>
+   <div id="app">
+     <h1>{{ product }}</h1>
++    <h1>{{ product + '?' }}</h1>
++    <h1>{{ product.split('').reverse().join('') }}</h1>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+== リアルタイムに値を変更する ==
+Vue.js はReactative なのでコンソールからリアルタイムにproduct の名前を変更することができます。
+F12 でコンソールを開き、以下のように変数を入れ替えて見ましょう。
+
+<syntaxhighlight lang="text">
+> app.product = 'Coat';
+> app.product = 'Compass';
+</syntaxhighlight>
+
+= 参考 =
+; The Vue Instance
+: https://www.vuemastery.com/courses/intro-to-vue-js/vue-instance

@@ -1,0 +1,439 @@
+= Components =
+コンポーネントは部品の塊で、画面のパーツをひとまとめにして管理することができます。
+またコンポーネントは親子関係を構築することができます。
+コンポーネントの欠点として、親コンポーネントから直接データをもらえない事。
+それは<code>props</code> を通じて行われます。<br /><br />
+
+これらについて勉強していきましょう。
+
+== スタートポイント ==
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="product">
+
+      <div class="product-image">
+        <img :src="image">
+      </div>
+
+      <div class="product-info">
+        <h1>{{ title }}</h1>
+
+        <p v-if="inStock">In Stock</p>
+        <p v-else>Out of Stock</p>
+
+        <ul>
+          <li v-for="detail in details">{{ detail }}</li>
+        </ul>
+
+        <div v-for="(variant, index) in variants"
+          class="color-box"
+          :key="variant.variantId"
+          :style="{ backgroundColor: variant.variantColor }"
+          @mouseover="updateProduct(index)">
+        </div>
+
+        <button v-on:click="addToCart"
+          :disabled="!inStock"
+          :class="{ disabledButton: !inStock }">Add to Cart</button>
+
+        <div class="cart">
+          <p>Cart({{ cart }})</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+var app = new Vue({
+  el: '#app',
+  data: {
+    product: 'Socks',
+    brand: 'Vue Mastery',
+    selectedVariant: 0,
+    details: ["80% cotton", "20% polyester", "Gender-neutral"],
+    variants: [
+      {
+        variantId: 2234,
+        variantColor: "green",
+        variantImage: "./assets/vmSocks-green.jpg",
+        variantQuantity: 10
+      },
+      {
+        variantId: 2235,
+        variantColor: "blue",
+        variantImage: "./assets/vmSocks-blue.jpg",
+        variantQuantity: 0
+      }
+    ],
+    cart: 0
+  },
+  methods: {
+    addToCart() {
+      this.cart += 1;
+    },
+    updateProduct(index) {
+      this.selectedVariant = index;
+      console.log("index -> " + index);
+    }
+  },
+  computed: {
+    title() {
+      return this.brand + ' ' + this.product;
+    },
+    image() {
+      return this.variants[this.selectedVariant].variantImage;
+    },
+    inStock() {
+      return this.variants[this.selectedVariant].variantQuantity;
+    }
+  }
+});
+</syntaxhighlight>
+
+== コンポーネントを作成する ==
+商品が表示されていたエリアをコンポーネントとして、JavaScript 側に外出しします。<br />
+またVue インスタンス内にあった<code>data</code>, <code>methods</code>, <code>computed</code> プロパティもコンポーネントの中へ移動します。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+-    <div class="product">
+-
+-      <div class="product-image">
+-        <img :src="image">
+-      </div>
+-
+-      <div class="product-info">
+-        <h1>{{ title }}</h1>
+-
+-        <p v-if="inStock">In Stock</p>
+-        <p v-else>Out of Stock</p>
+-
+-        <ul>
+-          <li v-for="detail in details">{{ detail }}</li>
+-        </ul>
+-
+-        <div v-for="(variant, index) in variants"
+-          class="color-box"
+-          :key="variant.variantId"
+-          :style="{ backgroundColor: variant.variantColor }"
+-          @mouseover="updateProduct(index)">
+-        </div>
+-
+-        <button v-on:click="addToCart"
+-          :disabled="!inStock"
+-          :class="{ disabledButton: !inStock }">Add to Cart</button>
+-
+-        <div class="cart">
+-          <p>Cart({{ cart }})</p>
+-        </div>
+-      </div>
+-
+-    </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="diff">
+-var app = new Vue({
+-  el: '#app',
++Vue.component('product', {
++  template: `
++    <div class="product">
++
++      <div class="product-image">
++        <img :src="image">
++      </div>
++
++      <div class="product-info">
++        <h1>{{ title }}</h1>
++
++        <p v-if="inStock">In Stock</p>
++        <p v-else>Out of Stock</p>
++
++        <ul>
++          <li v-for="detail in details">{{ detail }}</li>
++        </ul>
++
++        <div v-for="(variant, index) in variants"
++          class="color-box"
++          :key="variant.variantId"
++          :style="{ backgroundColor: variant.variantColor }"
++          @mouseover="updateProduct(index)">
++        </div>
++
++        <button v-on:click="addToCart"
++          :disabled="!inStock"
++          :class="{ disabledButton: !inStock }">Add to Cart</button>
++
++        <div class="cart">
++          <p>Cart({{ cart }})</p>
++        </div>
++      </div>
++
++    </div>
++  `,
+   data: {
+     product: 'Socks',
+     brand: 'Vue Mastery',
+     selectedVariant: 0,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+       {
+         variantId: 2234,
+         variantColor: "green",
+         variantImage: "./assets/vmSocks-green.jpg",
+         variantQuantity: 10
+       },
+       {
+         variantId: 2235,
+         variantColor: "blue",
+         variantImage: "./assets/vmSocks-blue.jpg",
+         variantQuantity: 0
+       }
+     ],
+     cart: 0
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     }
+   }
++});
++
++var app = new Vue({
++  el: '#app',
+ });
+</syntaxhighlight>
+
+そして、ここでdata を値ではなくメソッド化して、常に新しいインスタンスを<code>return</code> するように変更します。
+なぜこの対応が必要なのかと言うと、それぞれの<code>product</code> コンポーネントは、同じ<code>data</code> を全コンポーネントで共有してしまうことになり、再利用性という目的を満たせなくなってしまうためです。<br />
+コンポーネント間での副作用をなくすためにも<code>data</code> は各コンポーネントインスタンス毎に新しくインスタンス化するようにしましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart</button>
+
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   `,
+-  data: {
+-    product: 'Socks',
+-    brand: 'Vue Mastery',
+-    selectedVariant: 0,
+-    details: ["80% cotton", "20% polyester", "Gender-neutral"],
+-    variants: [
+-      {
+-        variantId: 2234,
+-        variantColor: "green",
+-        variantImage: "./assets/vmSocks-green.jpg",
+-        variantQuantity: 10
+-      },
+-      {
+-        variantId: 2235,
+-        variantColor: "blue",
+-        variantImage: "./assets/vmSocks-blue.jpg",
+-        variantQuantity: 0
+-      }
+-    ],
+-    cart: 0
++  data() {
++    return {
++      product: 'Socks',
++      brand: 'Vue Mastery',
++      selectedVariant: 0,
++      details: ["80% cotton", "20% polyester", "Gender-neutral"],
++      variants: [
++        {
++          variantId: 2234,
++          variantColor: "green",
++          variantImage: "./assets/vmSocks-green.jpg",
++          variantQuantity: 10
++        },
++        {
++          variantId: 2235,
++          variantColor: "blue",
++          variantImage: "./assets/vmSocks-blue.jpg",
++          variantQuantity: 0
++        }
++      ],
++      cart: 0
++    }
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+ });
+</syntaxhighlight>
+
+これでコンポーネントの作成は完了です。
+次はhtml 側でこの<code>product</code>コンポーネントを呼び出すように修正しましょう。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
++    <product></product>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+これでコンポーネント化は完成です。
+それではWeb 画面を表示して確認してみましょう。
+
+[[Image:08_Components0001.png]]
+
+見た目は同じですが、コンポーネント化された画面が表示されるようになっています。
+要素を見てみると、<code>product</code> というクラス名で、内容が展開されているのを確認できます。
+
+[[Image:08_Components0002.png]]
+
+== コンポーネントを再利用する ==
+コンポーネント化の大きな魅力として再利用できるところにあります。
+以下のようにして<code>product</code> コンポーネントを複製して見ましょう。
+
+* index.html
+<syntaxhighlight lang="html">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <product></product>
++    <product></product>
++    <product></product>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+Web 画面を確認すると以下のように表示されます。
+
+[[Image:08_Components0003.png]]
+
+==  ==
+
+<syntaxhighlight lang="diff">
+</syntaxhighlight>
+
+<syntaxhighlight lang="diff">
+</syntaxhighlight>
+
+自宅サーバのWiki に上げる用のなぐり書き記事です。
+
+= 参考 =
+; Components
+: https://www.vuemastery.com/courses/intro-to-vue-js/components
+

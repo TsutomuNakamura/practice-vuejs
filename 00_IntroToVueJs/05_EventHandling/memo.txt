@@ -1,0 +1,346 @@
+= イベントハンドリング(Event Handling) =
+<code>v-on</code> を使ったDOM イベントのListen とメソッドのトリガーについて勉強していきます。
+
+== 開始時点でのソースコード ==
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="product">
+
+      <div class="product-image">
+        <img :src="image">
+      </div>
+
+      <div class="product-info">
+        <h1>{{ product }}</h1>
+        <p v-if="inStock">In Stock</p>
+        <p v-else>Out of Stock</p>
+        <ul>
+          <li v-for="detail in details">{{ detail }}</li>
+        </ul>
+        <div v-for="variant in variants" :key="variant.variantId">
+          <p>{{ variant.variantColor }}</p>
+        </div>
+
+        <button>Add to Cart</button>
+        <div class="cart">
+          <p>Cart({{ cart }})</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+var app = new Vue({
+  el: '#app',
+  data: {
+    product: 'Socks',
+    image: './assets/vmSocks-green.jpg',
+    inStock: true,
+    details: ["80% cotton", "20% polyester", "Gender-neutral"],
+    variants: [
+      { variantId: 2234, variantColor: "green" },
+      { variantId: 2235, variantColor: "blue" }
+    ],
+    cart: 0
+  },
+});
+</syntaxhighlight>
+
+[[Image:05_EventHandling0001.png]]
+
+== ボタンを押した時にCart の中身をインクリメントする ==
+<code>Add to Cart</code> ボタンをクリックした時にCart の中の数をインクリメントするプログラムについて見ていきます。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+         <div v-for="variant in variants" :key="variant.variantId">
+           <p>{{ variant.variantColor }}</p>
+         </div>
+
+-        <button v-on:click="cart += 1">Add to Cart</button>
++        <button>Add to Cart</button>
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+[[Image:05_EventHandling0002.png]]
+
+<code>Add to Cart</code> ボタンを押すとCart の値がインクリメントされるようになりました。
+
+== 処理を関数化する ==
+上記のような記載でも動きはしますが、アプリが複雑になってきた時にメソッド化しておいたほうが良かったりするようになります。
+そんなときはVue インスタンスの<code>methods</code> の中にメソッドを定義して呼び出すこともできます。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+         <div v-for="variant in variants" :key="variant.variantId">
+           <p>{{ variant.variantColor }}</p>
+         </div>
+
+-        <button v-on:click="cart += 1">Add to Cart</button>
++        <button v-on:click="addToCart">Add to Cart</button>
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+     inStock: true,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+       { variantId: 2234, variantColor: "green" },
+       { variantId: 2235, variantColor: "blue" }
+     ],
+     cart: 0
+   },
++  methods: {
++    addToCart() {
++      this.cart += 1;
++    }
++  }
+ });
+</syntaxhighlight>
+
+[[Image:05_EventHandling0003.png]]
+
+=== 補足: メソッドの書き方について ===
+上記例のメソッドの書き方は、従来ながらの<code>function</code> キーワードを使って書くと以下のようになります。
+これはどちらも同じ動きをします。
+
+* function を使った場合の記法
+<syntaxhighlight lang="javascript">
+// ......
+    addToCart() {
+      this.cart += 1;
+    }
+// ↓　↓　↓
+    addToCart: function() {
+      this.cart += 1;
+    }
+// ......
+</syntaxhighlight>
+
+== マウスオーバー時に画像を変更する ==
+マウスオーバーした時に表示する画像を変えるように処理を追加します。
+まずは各靴下のオブジェクトごとに画像Path データ<code>variantImage</code>を追加します。
+
+* main.js
+<syntaxhighlight lang="javascript">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+     inStock: true,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+-      { variantId: 2234, variantColor: "green" },
+-      { variantId: 2235, variantColor: "blue" }
++      {
++        variantId: 2234,
++        variantColor: "green",
++        variantImage: "./assets/vmSocks-green.jpg"
++      },
++      {
++        variantId: 2235,
++        variantColor: "blue",
++        variantImage: "./assets/vmSocks-blue.jpg"
++      }
+     ],
+     cart: 0
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     }
+   }
+ });
+</syntaxhighlight>
+
+<code>v-on:mouseover</code> を追加してマウスオーバー時のイベントを登録します。
+<code>v-on:</code> の記述は<code>@</code> で省略できるので、それで省略して記載してみましょう。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+         <div v-for="variant in variants" :key="variant.variantId">
+-          <p>{{ variant.variantColor }}</p>
++          <p>
++            {{ variant.variantColor }}
++          </p>
+         </div>
+
+         <button v-on:click="addToCart">Add to Cart</button>
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+<code>main.js</code> にupdateProduct メソッドを追加します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+     image: './assets/vmSocks-green.jpg',
+     inStock: true,
+     details: ["80% cotton", "20% polyester", "Gender-neutral"],
+     variants: [
+       {
+         variantId: 2234,
+         variantColor: "green",
+         variantImage: "./assets/vmSocks-green.jpg"
+       },
+       {
+         variantId: 2235,
+         variantColor: "blue",
+         variantImage: "./assets/vmSocks-blue.jpg"
+       }
+     ],
+     cart: 0
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
++    },
++    updateProduct(variantImage) {
++      this.image = variantImage
+     }
+   }
+ });
+</syntaxhighlight>
+
+画面を開いて<code>green</code>, <code>blue</code> の文字の上でオンマウスして靴下の色が変わることが確認できます。
+
+[[Image:05_EventHandling0004.png]]
+
+== その他のイベントについて ==
+<code>click</code>, <code>mouseover</code> 以外のイベントとしては以下のようなものがあります。
+
+* <code><button @click="addToCart">Add to cart</button></code>
+* <code><div @mouseover="updateProduct">Color</div></code>
+* <code><form @submit="addToCart">...</form></code>
+* <code><input @keyup.enter="send"></code>
+
+その他のイベントなどについては'''Uptimate Vue Cheat Sheet '''がわかりやすい。
+https://www.vuemastery.com/ からダウンロード可能。
+
+= 参考 =
+; Event Handling
+: https://www.vuemastery.com/courses/intro-to-vue-js/event-handling
+

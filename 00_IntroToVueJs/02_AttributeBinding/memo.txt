@@ -1,0 +1,276 @@
+= 属性のバインディング =
+<code>v-bind:</code> を使用した属性のバインディングについて勉強していく。<br />
+
+本レッスンを開始する時点でのソースコードは以下の通り。
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="product">
+      <div class="product-image">
+        <img src="">
+      </div>
+      <h1>{{ product }}</h1>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+html にはcss の読み込みやいくつかのスタイルコンテナ<code>div</code> が追加されています。
+
+* main.js
+<syntaxhighlight lang="javascript">
+var app = new Vue({
+  el: '#app',
+  data: {
+    product: 'Socks',
+  },
+});
+</syntaxhighlight>
+
+* style.css
+<syntaxhighlight lang="css">
+body {
+   font-family: tahoma;
+   color:#282828;
+   margin: 0px;
+}
+.nav-bar {
+  background: linear-gradient(-90deg, #84CF6A, #16C0B0);
+  height: 60px;
+  margin-bottom: 15px;
+}
+.product {
+  display: flex;
+  flex-flow: wrap;
+  padding: 1rem;
+}
+img {
+  border: 1px solid #d8d8d8;
+  width: 70%;
+  margin: 40px;
+  box-shadow: 0px .5px 1px #d8d8d8;
+}
+.product-image {
+  width: 80%;
+}
+.product-image,
+.product-info {
+  margin-top: 10px;
+  width: 50%;
+}
+.color-box {
+  width: 40px;
+  height: 40px;
+  margin-top: 5px;
+}
+.cart {
+  margin-right: 25px;
+  float: right;
+  border: 1px solid #d8d8d8;
+  padding: 5px 20px;
+}
+button {
+  margin-top: 30px;
+  border: none;
+  background-color: #1E95EA;
+  color: white;
+  height: 40px;
+  width: 100px;
+  font-size: 14px;
+} 
+.disabledButton {
+  background-color: #d8d8d8;
+}
+.review-form {
+  width: 400px;
+  padding: 20px;
+  margin: 40px;
+  border: 1px solid #d8d8d8;
+}
+input {
+  width: 100%;  
+  height: 25px;
+  margin-bottom: 20px;
+}
+textarea {
+  width: 100%;
+  height: 60px;
+}
+.tab {
+  margin-left: 20px;
+  cursor: pointer;
+}
+.activeTab {
+  color: #16C0B0;
+  text-decoration: underline;
+}
+</syntaxhighlight>
+css は以下のサイトからダウンロード可能。
+
+; atomjar/product_style
+: https://gist.github.com/atomjar/67db5aa9b7b9013dcf0d91c91f54e1a9
+
+== イメージを表示する場所と情報を表示する場所を定義する ==
+index.html を編集してイメージを表示する場所と情報を表示する場所を定義します。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+-      <h1>{{ product }}</h1>
++      <div class="product-image">
++        <img src="">
++      </div>
++
++      <div class="product-info">
++        <h1>{{ product }}</h1>
++      </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+上記の状態でWeb 画面を表示するとまだイメージは表示されませんが、左側にイメージを表示するエリア、右側に情報を表示するエリアという形でレイアウトが別れていることがわかります。
+
+== イメージを表示する ==
+画像を表示するエリアと情報を表示するエリアとが作成できたところで、Vue を使って実際にイメージを表示させてみましょう。
+<code>main.js</code> に以下のように記述します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
++    image: './assets/vmSocks-green.jpg'
+   },
+ });
+</syntaxhighlight>
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+-        <img src="">
++        <img v-bind:src="image">
+       </div>
+ 
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+編集が完了したらWeb ブラウザの画面を開いてみましょう。
+そうすると画面左側に緑色のSocks が表示されることが確認できるでしょう。<br /><br />
+
+このようにして<code>v-bind:</code> を使うことによって、要素内の特定の属性に対してVue から値を操作できるようになるのです。
+
+=== 補足:要素の外で二重括弧"{{ }}" を指定するとどうなるか ===
+要素の属性の外で、例えば<code>{{ image }}</code> とすると<code>./assets/vmSocks-green.jpg</code> という文字列が表示されるようになります。
+
+== 表示する画像を変更する ==
+前述したとおり、もちろんVue はReactative なので、JS の値を変更すると表示する画像を変更することができます。
+
+* main.js
+<syntaxhighlight lang="diff">
+ var app = new Vue({
+   el: '#app',
+   data: {
+     product: 'Socks',
+-    image: './assets/vmSocks-green.jpg'
++    image: './assets/vmSocks-blue.jpg'
+   },
+ });
+</syntaxhighlight>
+
+ブラウザの画面を更新することで、青いソックスに変わったことが確認できると思います。
+
+== コンソールから表示する画像を変更する ==
+もちろん(繰り返しになりますが)Vue はReactative なので、コンソールから動的に値を変更することで表示画像を変更することもできます。
+
+<syntaxhighlight lang="text">
+> app.image = "./assets/vmSocks-green.jpg";
+</syntaxhighlight>
+
+上記のようにコンソールから実行することで、動的に画像を変更することも可能です。
+
+== 省略記法について ==
+<code>v-bind</code> の記載は省略することもできます。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="product">
+ 
+       <div class="product-image">
+-        <img v-bind:src="image">
++        <img :src="image">
+       </div>
+ 
+       <div class="product-info">
+         <h1>{{ product }}</h1>
+       </div>
+ 
+     </div>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+上記のような記述でも問題なく表示されることが確認できると思います。
+
+= 参考 =
+; Attribute Binding
+: https://www.vuemastery.com/courses/intro-to-vue-js/attribute-binding
+
