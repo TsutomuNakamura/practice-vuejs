@@ -423,15 +423,291 @@ Web 画面を確認すると以下のように表示されます。
 
 [[Image:08_Components0003.png]]
 
-==  ==
+ここで、次のレクチャーに進むために一旦<code>product</code> コンポーネントは削除しておきます。
 
-<syntaxhighlight lang="diff">
+* index.html
+<syntaxhighlight lang="html">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <product></product>
+-    <product></product>
+-    <product></product>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
 </syntaxhighlight>
 
+== prop でデータを渡す ==
+prop でコンポーネントに対してデータを渡していきます。<br />
+今回はプレミアムユーザかどうかのフラグをprop として親インスタンスからコンポーネントに渡す例を参考にやっていきたい思います。<br />
+main.js にprop として渡す<code>premium</code> を定義します。そしてhtml 側でpremium 変数を<code>v-bind</code> でpremium コンポーネントにその値を渡し、premium コンポーネント内ではprop を受け取る定義(props プロパティの定義)をし、template 内にprop として渡されたpremium を利用します。
+
+* main.js
 <syntaxhighlight lang="diff">
+ Vue.component('product', {
++  props: {
++    premium: {
++      type: Boolean,
++      required: true
++    }
++  },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
++        <p>User is premium: {{ premium }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart</button>
+
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       cart: 0
+     }
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
++  data: {
++    premium: true
++  }
+ });
 </syntaxhighlight>
 
-自宅サーバのWiki に上げる用のなぐり書き記事です。
+html 内には<code>v-bind</code> としてpremium 属性を指定します。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+-    <product></product>
++    <product :premium="premium"></product>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+[[Image:08_Components0004.png]]
+
+画面の表示が<code>User is premium: true</code> と表示されることが確認できると思います。<br />
+ここでprop の値をコンソールからfalse にしてみましょう。
+
+* console
+<syntaxhighlight lang="text">
+> app.premium = false;
+</syntaxhighlight>
+
+[[Image:08_Components0005.png]]
+
+すると画面表示もfalse に変わることが確認できます。
+
+== premium は配送料を無料にしてみる ==
+もっと現実的な実装として、premium なユーザは配送料を無料にするような実装をしてみましょう。<br />
+まずはmain.js 内のコンポーネントを編集して画面の表示を変更します。<br />
+そしてpremium だったら配送料をFree、そうでなければ2.99 ドルと表示されるようにcomputed を追加します。
+
+* index.html
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+-        <p>User is premium: {{ premium }}</p>
++        <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart</button>
+
+         <div class="cart">
+           <p>Cart({{ cart }})</p>
+         </div>
+       </div>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       cart: 0
+     }
+   },
+   methods: {
+     addToCart() {
+       this.cart += 1;
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
++    },
++    shipping() {
++      if(this.premium) {
++        return "Free";
++      }
++      return 2.99;
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true
+   }
+ });
+</syntaxhighlight>
+
+[[Image:08_Components0006.png]]
+
+すると画面のように<code>Shipping: Free</code> と表示されます。
+ここで先ほどと同様に、コンソールからpremium をfalse にしてみましょう。
+
+* console
+<syntaxhighlight lang="text">
+> app.premium = false;
+</syntaxhighlight>
+
+[[Image:08_Components0007.png]]
+
+すると画面の配送料の表示が<code>2.99</code> に変わるのが確認できます。
 
 = 参考 =
 ; Components
