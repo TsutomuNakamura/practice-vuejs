@@ -249,6 +249,7 @@ Cart 要素をより大域的な場所に定義するために、コンポーネ
 
 コンポーネント側にemit を追加して、処理を渡すイベント名<code>add-to-cart</code>を書きます。
 そして親となるHTML 側のproduct コンポーネントの宣言部分に<code>add-to-cart</code> という名前の<code>v-on:(@)</code> 属性を追加します。
+そしてそこから呼び出している<code>updateCart()</code> メソッドを新たに定義します。
 
 * index.html
 <syntaxhighlight lang="diff">
@@ -370,14 +371,172 @@ Cart 要素をより大域的な場所に定義するために、コンポーネ
    data: {
      premium: true,
      cart: 0
+-  }
++  },
++  methods: {
++    updateCart() {
++      this.cart += 1
++    }
+   }
+ });
+</syntaxhighlight>
+
+上記のように編集すると、
+
+ <code>Add to Cart</code>ボタン(emit) -> <code>product</code> コンポーネント(html) -> <code>updateCart</code> メソッド
+
+というように、コンポーネントから一度親要素であるHTML へ処理が渡り、Vue インスタンスの<code>updateCart</code> メソッドへ処理が戻ってきます。<br />
+このようにしてあるコンポーネントからコンポーネントの外に対してコミュニケーションを行う時は<code>emit</code> を使うようにすればよいのです。
+
+== Cart に要素を入れてそれをカウントするようにする ==
+現状だとコンポーネントのCart の値はint 型になっています。
+これは実際のプログラムでは現実的ではありません。Cart の中には商品をいれて、画面にはその商品の数をカウントして表示されるのが通例です。<br /><br />
+
+ということでCart を配列型に変更して、そこに商品のID を入れる構造にしてみましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart</button>
+       </div>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ]
+     }
    },
    methods: {
-     updateCart() {
-       this.cart += 1
+     addToCart() {
+-      this.$emit('add-to-cart');
++      this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+-    cart: 0
++    cart: []
+   },
+   methods: {
+-    updateCart() {
+-      this.cart += 1
++    updateCart(id) {
++      this.cart.push(id);
      }
    }
  });
 </syntaxhighlight>
+
+ここで画面を確認し、<code>Add to Cart</code> をクリックしてみましょう。
+すると、画面右上に商品ID が追加されているのが確認できるはずです。
+
+[[Image:09_CommunicatingEvents0002.png]]
+
+しかし、カートに入っている商品のID を表示するのはあまり意味がありません。
+ここはカートに入っている商品の数を表示するために、<code>Cart.length</code> で配列の長さを表示するようにしましょう。
+
+* index.html
+<syntaxhighlight lang="diff">
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Product App</title>
+ <link rel="stylesheet" type="text/css" href="style.css" />
+ </head>
+ <body>
+   <div class="nav-bar"></div>
+   <div id="app">
+     <div class="cart">
+-      <p>Cart({{ cart }})</p>
++      <p>Cart({{ cart.length }})</p>
+     </div>
+     <product :premium="premium" @add-to-cart="updateCart"></product>
+   </div>
+   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+   <script src="main.js"></script>
+ </body>
+ </html>
+</syntaxhighlight>
+
+[[Image:09_CommunicatingEvents0003.png]]
+
+上記のようにすることで、右上にカートに格納されている商品数が表示されるようになりました。
 
 = 参考 =
 ; Communicating Events
