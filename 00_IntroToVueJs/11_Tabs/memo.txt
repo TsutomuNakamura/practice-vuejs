@@ -215,16 +215,931 @@ var app = new Vue({
 </syntaxhighlight>
 
 == Tab コンポーネントの作成 ==
-Tab コンポーネントを作成します。
+Tab コンポーネントを作成し、それを<code>product</code> コンポーネントに埋め込みます。
 
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
 
+       <div class="product-image">
+         <img :src="image">
+       </div>
 
+       <div class="product-info">
+         <h1>{{ title }}</h1>
 
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
 
+         <ul>
+           <li v-for="(detail, index) in details" :key="index">{{ detail }}</li>
+         </ul>
 
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
++      <product-tabs></product-tabs>
++
+       <div>
+         <h2>Reviews</h2>
+         <p v-if="!reviews.length">There are no review yet.</p>
+         <ul>
+           <li v-for="review in reviews">
+             <p>{{ review.name }}</p>
+             <p>Rating: {{ review.rating }}</p>
+             <p>{{ review.review }}</p>
+           </li>
+         </ul>
+       </div>
+
+       <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p v-if="errors.length">
+         <b>Please correct the following error(s):</b>
+         <ul>
+           <li v-for="error in errors">{{ error }}</li>
+         </ul>
+       </p>
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+       errors: []
+     }
+   },
+   methods: {
+     onSubmit() {
+       if (this.name && this.review && this.rating) {
+         let productReview = {
+           name: this.name,
+           review: this.review,
+           rating: this.rating
+         }
+         this.$emit('review-submitted', productReview);
+
+         // reset after this form was submitted.
+         this.name = null;
+         this.review = null;
+         this.rating = null;
+       } else {
+         if (!this.name) this.errors.push("Name required.");
+         if (!this.review) this.errors.push("Review required.");
+         if (!this.rating) this.errors.push("Rating required.");
+       }
+     }
+   }
+
+ });
+
++Vue.component('product-tabs', {
++  template: `
++    <div>
++      <span class="tab" v-for="(tab, index) in tabs" :key="index">{{ tab }}</span>
++    </div>
++  `,
++  data() {
++    return {
++      tabs: ['Reviews', 'Make a Review']
++    }
++  }
++});
++
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+ここで一旦画面の表示を確認してみましょう。
+
+[[Image:VueMastery_IntroToVueJs_11_Tags0001.png]]
+
+すると<code>Reviews</code>, <code>Make a Review</code> の2 つの文字が出現するようになったのが確認できます。
+
+== タブの選択状態を保持する ==
+tab テンプレートに<code>selectedTab</code> というtab が選択された時に、どのタブが選択状態なのかを保持するデータを定義します。
+また、テンプレートにタブをクリックした時に選択状態のタブを更新するために<code>@click</code>の追加及び、選択状態のタブに対して<code>activeTab</code> というスタイルclass を指定するように<code>:class</code> を指定するようにしてみます。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="(detail, index) in details" :key="index">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <product-tabs></product-tabs>
+
+       <div>
+         <h2>Reviews</h2>
+         <p v-if="!reviews.length">There are no review yet.</p>
+         <ul>
+           <li v-for="review in reviews">
+             <p>{{ review.name }}</p>
+             <p>Rating: {{ review.rating }}</p>
+             <p>{{ review.review }}</p>
+           </li>
+         </ul>
+       </div>
+
+       <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p v-if="errors.length">
+         <b>Please correct the following error(s):</b>
+         <ul>
+           <li v-for="error in errors">{{ error }}</li>
+         </ul>
+       </p>
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+       errors: []
+     }
+   },
+   methods: {
+     onSubmit() {
+       if (this.name && this.review && this.rating) {
+         let productReview = {
+           name: this.name,
+           review: this.review,
+           rating: this.rating
+         }
+         this.$emit('review-submitted', productReview);
+
+         // reset after this form was submitted.
+         this.name = null;
+         this.review = null;
+         this.rating = null;
+       } else {
+         if (!this.name) this.errors.push("Name required.");
+         if (!this.review) this.errors.push("Review required.");
+         if (!this.rating) this.errors.push("Rating required.");
+       }
+     }
+   }
+
+ });
+
+ Vue.component('product-tabs', {
+   template: `
+     <div>
+-      <span class="tab" v-for="(tab, index) in tabs" :key="index">{{ tab }}</span>
++      <span class="tab"
++            v-for="(tab, index) in tabs"
++            :class="{ activeTab: selectedTab == tab }"
++            :key="index"
++            @click="selectedTab = tab"
++            >{{ tab }}</span>
+     </div>
+   `,
+   data() {
+     return {
+-      tabs: ['Reviews', 'Make a Review']
++      tabs: ['Reviews', 'Make a Review'],
++      selectedTab: 'Reviews'
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+ここで画面を開いて<code>Reviews</code>, <code>Make a Review</code> をクリックしてみましょう。
+
+[[Image:VueMastery_IntroToVueJs_11_Tags0002.png]]<br />
+[[Image:VueMastery_IntroToVueJs_11_Tags0003.png]]
+
+上記のようにそれぞれのタブの文字をクリックすると選択されているタブのデザインが変わっているのが確認できます。
+これは先程data 内に定義した<code>selectedTab</code> に<code>Reviews</code> or <code>Make a Review</code> の値が保持され、交互に表示が切り替わるようになっているのです。
+
+== タブのコンテンツを組み込む ==
+レビューを表示するHTML 要素群を<code>Review</code> タブの中に組み込みます。
+Review を表示するコンポーネントを<code>product-tabs</code> コンポーネントの中に入れ、移動することにより参照することができなくなってしまった<code>review</code> プロパティをemit で親コンポーネントである<code>product</code> コンポーネントへ一旦渡し、<code>product</code> コンポーネント内の<code>reviews</code> プロパティ(配列) を参照し、<code>product-tabs</code> コンポーネントにその値を<code>prop</code> として渡すようにします。<br />
+そして、このビューを<code>v-show</code> を使って、<code>Reviews</code> タブが選択されているかどうかの状態をチェックして、選択されているときのみ表示をするように切り替えるようにしましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+
+</syntaxhighlight>
+
+[[Image:VueMastery_IntroToVueJs_11_Tags0004.png]]
+
+上記のようにReviews タブが選択されているときだけ、Reviews のページが表示されれば成功です。
+
+== レビュー投稿ページ(product-review) をタブの中に入れる ==
+レビュー閲覧ページ(Review) をタブの中に入れられたので、次はレビュー投稿ページのコンポーネント(product-review) をタブの中に入れてみましょう。<br /><br />
+
+<code>product-review</code> をタブの中に入れる際の注意点として、このコンポーネントを<code>product-tabs</code> コンポーネントの中に入れると、product-review コンポーネントが参照している<code>addReview</code> が、親の親コンポーネントが持つメソッドとなってしまう点です。
+
+<syntaxhighlight lang="text">
+<product>  // -> addReview メソッドはこのコンポーネント内にある
+  <product-tabs>
+    <product-review>  // -> addReview メソッドはこのコンポーネントで呼ばれる
+</syntaxhighlight>
+
+親のメソッドを参照する場合は<code>emit</code> を使えばよいのですが、親の親のメソッドとなると若干手間になります…。
+ということで今回はグローバル変数領域に値する<code></code> を使ってみましょう。
+
+== product-review コンポーネントをtabs コンポーネントに移動する ==
+とりあえず<code>product-review</code> コンポーネントを<code>product-tabs</code> コンポーネントへ移動してみましょう。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="(detail, index) in details" :key="index">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <product-tabs :reviews="reviews"></product-tabs>
+-
+-      <product-review @review-submitted="addReview"></product-review>
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p v-if="errors.length">
+         <b>Please correct the following error(s):</b>
+         <ul>
+           <li v-for="error in errors">{{ error }}</li>
+         </ul>
+       </p>
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+       errors: []
+     }
+   },
+   methods: {
+     onSubmit() {
+       if (this.name && this.review && this.rating) {
+         let productReview = {
+           name: this.name,
+           review: this.review,
+           rating: this.rating
+         }
+         this.$emit('review-submitted', productReview);
+
+         // reset after this form was submitted.
+         this.name = null;
+         this.review = null;
+         this.rating = null;
+       } else {
+         if (!this.name) this.errors.push("Name required.");
+         if (!this.review) this.errors.push("Review required.");
+         if (!this.rating) this.errors.push("Rating required.");
+       }
+     }
+   }
+
+ });
+
+ Vue.component('product-tabs', {
+   props: {
+     reviews: {
+       type: Array,
+       required: true
+     }
+   },
+   template: `
+     <div>
+       <span class="tab"
+             v-for="(tab, index) in tabs"
+             :class="{ activeTab: selectedTab == tab }"
+             :key="index"
+             @click="selectedTab = tab"
+             >{{ tab }}</span>
+       <div v-show="selectedTab === 'Reviews'">
+         <h2>Reviews</h2>
+         <p v-if="!reviews.length">There are no review yet.</p>
+         <ul>
+           <li v-for="review in reviews">
+             <p>{{ review.name }}</p>
+             <p>Rating: {{ review.rating }}</p>
+             <p>{{ review.review }}</p>
+           </li>
+         </ul>
+       </div>
++
++      <product-review @review-submitted="addReview" v-show="selectedTab === 'Make a Review'"></product-review>
+     </div>
+   `,
+   data() {
+     return {
+       tabs: ['Reviews', 'Make a Review'],
+       selectedTab: 'Reviews'
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+この状態でWeb 画面を表示してコンソールを確認してみましょう。
+すると以下のようなエラーが表示されます。
+
+[[Image:VueMastery_IntroToVueJs_11_Tags0005.png]]
+
+<code>addReview</code> メソッドが参照できていません。
+コレを解消するために、今回は大域的なデータを保存する(eventBus) を定義して利用するようにしてみましょう。
+
+== グローバルチャネルのイベントバス(eventBus) を定義する ==
+<code>product-review</code> とその親の親である<code>product</code> がコミュニケーションするためのeventBus を定義しましょう。<br />
+* また、それにより使われなくなった<code>@review-submitted</code> イベントは削除します。<br />
+* そして<code>review-submitted</code> をemit する対象を<code>this(product-review)</code> ではなく<code>eventBus</code> へ変更します。
+* そして使われなくなった<code>product</code> コンポーネント内の<code>addReview</code> メソッドは削除します
+* その代わり<code>product</code> コンポーネントにmounted メソッドを追加して、Vue のコンポーネントがマウント完了した直後に実行されるメソッドを定義してその中で、review の情報をpush するようにします(addReview メソッドが実行していた処理と同等の処理)
+※mounted についてはVue Mastery の次のコンテンツでより詳しく解説される
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="(detail, index) in details" :key="index">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <product-tabs :reviews="reviews"></product-tabs>
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+-    },
+-    addReview(productReview) {
+-      this.reviews.push(productReview);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
++  },
++  mounted() {
++    eventBus.$on('review-submitted', productReview => {
++      this.reviews.push(productReview)
++    });
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p v-if="errors.length">
+         <b>Please correct the following error(s):</b>
+         <ul>
+           <li v-for="error in errors">{{ error }}</li>
+         </ul>
+       </p>
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+       errors: []
+     }
+   },
+   methods: {
+     onSubmit() {
+       if (this.name && this.review && this.rating) {
+         let productReview = {
+           name: this.name,
+           review: this.review,
+           rating: this.rating
+         }
+-        this.$emit('review-submitted', productReview);
++        eventBus.$emit('review-submitted', productReview);
+
+         // reset after this form was submitted.
+         this.name = null;
+         this.review = null;
+         this.rating = null;
+       } else {
+         if (!this.name) this.errors.push("Name required.");
+         if (!this.review) this.errors.push("Review required.");
+         if (!this.rating) this.errors.push("Rating required.");
+       }
+     }
+   }
+
+ });
+
+ Vue.component('product-tabs', {
+   props: {
+     reviews: {
+       type: Array,
+       required: true
+     }
+   },
+   template: `
+     <div>
+       <span class="tab"
+             v-for="(tab, index) in tabs"
+             :class="{ activeTab: selectedTab == tab }"
+             :key="index"
+             @click="selectedTab = tab"
+             >{{ tab }}</span>
+       <div v-show="selectedTab === 'Reviews'">
+         <h2>Reviews</h2>
+         <p v-if="!reviews.length">There are no review yet.</p>
+         <ul>
+           <li v-for="review in reviews">
+             <p>{{ review.name }}</p>
+             <p>Rating: {{ review.rating }}</p>
+             <p>{{ review.review }}</p>
+           </li>
+         </ul>
+       </div>
+
+-      <product-review @review-submitted="addReview" v-show="selectedTab === 'Make a Review'"></product-review>
++      <product-review v-show="selectedTab === 'Make a Review'"></product-review>
+     </div>
+   `,
+   data() {
+     return {
+       tabs: ['Reviews', 'Make a Review'],
+       selectedTab: 'Reviews'
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
 
 = 参考 =
 ; Tags
 : https://www.vuemastery.com/courses/intro-to-vue-js/tabs
-
 
