@@ -732,7 +732,6 @@ v-model ディレクティブは2 way binding を提供してくれます。
 +      this.rating = null;
      }
    }
-+
  });
 
  var app = new Vue({
@@ -753,15 +752,958 @@ v-model ディレクティブは2 way binding を提供してくれます。
 
 [[Image:10_Forms0003.png]]
 
-そしてSubmit ボタンを押下するとproduct 配列のにデータが1 件追加されるのが確認できます。
+そしてSubmit ボタンを押下するとproduct 配列にデータが1 件追加されるのが確認できます。
 
 [[Image:10_Forms0004.png]]
 
 == レビューを画面に表示する ==
-TODO:
+まだレビューが投稿されていない場合は<code>There are no reviews yet.</code> と表示して、レビューが1 件以上投稿されている場合はそのレビューを表示するといった画面を作成していきます。
+<code>main.js</code> のテンプレート内に以下の用にレビューが0 件時の表示を追加します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
++      <div>
++        <h2>Reviews</h2>
++        <p>There are no review yet.</p>
++      </div>
++
+       <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+       console.log(this.reviews);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+     }
+   },
+   methods: {
+     onSubmit() {
+       let productReview = {
+         name: this.name,
+         review: this.review,
+         rating: this.rating
+       }
+       this.$emit('review-submitted', productReview);
+
+       // reset after this form was submitted.
+       this.name = null;
+       this.review = null;
+       this.rating = null;
+     }
+   }
+
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+コレを、レビューのあり/なしで表示を切り替えるように実装していきます。
+レビューをリスト表示するために<code>ul, li</code> タグを使っていきます。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <div>
+         <h2>Reviews</h2>
+         <p>There are no review yet.</p>
++        <ul>
++          <li v-for="review in reviews">{{ review }}</li>
++        </ul>
+       </div>
+
+       <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+       console.log(this.reviews);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+     }
+   },
+   methods: {
+     onSubmit() {
+       let productReview = {
+         name: this.name,
+         review: this.review,
+         rating: this.rating
+       }
+       this.$emit('review-submitted', productReview);
+
+       // reset after this form was submitted.
+       this.name = null;
+       this.review = null;
+       this.rating = null;
+     }
+   }
+
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+再度Web 画面を表示してレビューを投稿してみましょう。
+すると以下のように、配列のデータをそのままですが、画面に表示できるようになりました。
+
+[[Image:10_Forms0005.png]]
+
+もっと、人間が読みやすく成るように改良し、レビューがある時は<code>There are no reviews yet.</code>が表示されないように完成に近づけていきます。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <div>
+         <h2>Reviews</h2>
+-        <p>There are no review yet.</p>
++        <p v-if="!reviews.length">There are no review yet.</p>
+         <ul>
+-          <li v-for="review in reviews">{{ review }}</li>
++          <li v-for="review in reviews">
++            <p>{{ review.name }}</p>
++            <p>Rating: {{ review.rating }}</p>
++            <p>{{ review.review }}</p>
++          </li>
+         </ul>
+       </div>
+
+       <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+       console.log(this.reviews);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+     }
+   },
+   methods: {
+     onSubmit() {
+       let productReview = {
+         name: this.name,
+         review: this.review,
+         rating: this.rating
+       }
+       this.$emit('review-submitted', productReview);
+
+       // reset after this form was submitted.
+       this.name = null;
+       this.review = null;
+       this.rating = null;
+     }
+   }
+
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+<code>review</code> インスタンス内の各属性を個別に指定し、レビューが無い時に表示されるメッセージは<code><p v-if="!reviews.length">There are no review yet.</p></code> と記述を変更して、review が0 件のときだけ表示される用に変更しました。
+ここで一旦Web 画面を確認してみましょう。
+
+[[Image:10_Forms0006.png]]
+
+上記のようにレビューを投稿すると、人間が読みやすい形式に変わっており、レビューがある時は<code>There are no review yet.</code> のコメントも表示されないように改良されました。
+
+== 必須項目を設定する ==
+レビューを投稿する時に、名前等を必須項目としてユーザに必ず入力させるようにさせたい場合などがあります。
+そういった場合に必須項目を作成する方法について勉強していきましょう。<br /><br />
+
+一つのやり方としてrequired 属性をつけることで、ブラウザ標準の必須項目を実装することもできます。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <div>
+         <h2>Reviews</h2>
+         <p v-if="!reviews.length">There are no review yet.</p>
+         <ul>
+           <li v-for="review in reviews">
+             <p>{{ review.name }}</p>
+             <p>Rating: {{ review.rating }}</p>
+             <p>{{ review.review }}</p>
+           </li>
+         </ul>
+       </div>
+
+       <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+       console.log(this.reviews);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+-        <textarea id="review" v-model="review"></textarea>
++        <textarea id="review" v-model="review" required></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
+     }
+   },
+   methods: {
+     onSubmit() {
+       let productReview = {
+         name: this.name,
+         review: this.review,
+         rating: this.rating
+       }
+       this.$emit('review-submitted', productReview);
+
+       // reset after this form was submitted.
+       this.name = null;
+       this.review = null;
+       this.rating = null;
+     }
+   }
+
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+[[Image:10_Forms0007.png]]
+
+上記のようにしてもよいのですが、ここではVue を使ったカスタムバリデーションを実装していきたいと思います。<br /><br />
+
+先程の<code>require</code> 属性は削除し、<code>data</code> にエラーを収集する<code>errors 配列</code>を追加します。
+そして、submit メソッドでエラーを収集する処理を追加します。
+そしてその後にテンプレートにそれらエラーをリスト表示する領域を追加します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <div>
+         <h2>Reviews</h2>
+         <p v-if="!reviews.length">There are no review yet.</p>
+         <ul>
+           <li v-for="review in reviews">
+             <p>{{ review.name }}</p>
+             <p>Rating: {{ review.rating }}</p>
+             <p>{{ review.review }}</p>
+           </li>
+         </ul>
+       </div>
+
+       <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ],
+       reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     },
+     addReview(productReview) {
+       this.reviews.push(productReview);
+       console.log(this.reviews);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
++      <p v-if="errors.length">
++        <b>Please correct the following error(s):</b>
++        <ul>
++          <li v-for="error in errors">{{ error }}</li>
++        </ul>
++      </p>
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+-        <textarea id="review" v-model="review" required></textarea>
++        <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+       rating: null,
++      errors: []
+     }
+   },
+   methods: {
+     onSubmit() {
+-      let productReview = {
+-        name: this.name,
+-        review: this.review,
+-        rating: this.rating
+-      }
+-      this.$emit('review-submitted', productReview);
++      if (this.name && this.review && this.rating) {
++        let productReview = {
++          name: this.name,
++          review: this.review,
++          rating: this.rating
++        }
++        this.$emit('review-submitted', productReview);
+
+-      // reset after this form was submitted.
+-      this.name = null;
+-      this.review = null;
+-      this.rating = null;
++        // reset after this form was submitted.
++        this.name = null;
++        this.review = null;
++        this.rating = null;
++      } else {
++        if (!this.name) this.errors.push("Name required.");
++        if (!this.review) this.errors.push("Review required.");
++        if (!this.rating) this.errors.push("Rating required.");
++      }
+     }
+   }
+
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+ここで一旦画面を表示して動作確認をしてみましょう。
+
+[[Image:10_Forms0008.png]]
+
+すると上記のようにエラーメッセージが表示されるのが確認できることでしょう。
 
 = 参考 =
 ; Forms
 : https://www.vuemastery.com/courses/intro-to-vue-js/forms
-
 
