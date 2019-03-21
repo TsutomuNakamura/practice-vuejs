@@ -1,0 +1,767 @@
+= 概要 =
+ユーザがレビューを追加できるように、Form を追加してみましょう。
+
+== ユーザが入力した値をリアルタイムに反映する ==
+Vue インスタンス上のデータを単にTemplate 内のForm に表示するだけでなく、ユーザが入力した値をリアルタイムにVue インスタンス内のdata に反映することを考えます。
+このようにVue インスタンス内のdata をTemplate のinput form に映すだけでなく、ユーザが入力した値をリアルタイムにdata に反映する処理を'''2 way data binding''' と呼びます。
+
+[[Image:10_Forms0000.png]]
+
+このようにすることで、ユーザがForm に文字を入力した時にリアルタイムでVue インスタンスのdata を更新するようになり、その'''Vue インスタンスのdata を使用している要素がリアルタイムに値(表示)を更新するようになります'''。
+
+== 開始ポイント ==
+
+* index.html
+<syntaxhighlight lang="html">
+<!DOCTYPE html>
+<html>
+<head>
+<title>Product App</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="nav-bar"></div>
+  <div id="app">
+    <div class="cart">
+      <p>Cart({{ cart.length }})</p>
+    </div>
+    <product :premium="premium" @add-to-cart="updateCart"></product>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="main.js"></script>
+</body>
+</html>
+</syntaxhighlight>
+
+* main.js
+<syntaxhighlight lang="javascript">
+Vue.component('product', {
+  props: {
+    premium: {
+      type: Boolean,
+      required: true
+    }
+  },
+  template: `
+    <div class="product">
+
+      <div class="product-image">
+        <img :src="image">
+      </div>
+
+      <div class="product-info">
+        <h1>{{ title }}</h1>
+
+        <p v-if="inStock">In Stock</p>
+        <p v-else>Out of Stock</p>
+        <p>Shipping: {{ shipping }}</p>
+
+        <ul>
+          <li v-for="detail in details">{{ detail }}</li>
+        </ul>
+
+        <div v-for="(variant, index) in variants"
+          class="color-box"
+          :key="variant.variantId"
+          :style="{ backgroundColor: variant.variantColor }"
+          @mouseover="updateProduct(index)">
+        </div>
+
+        <button v-on:click="addToCart"
+          :disabled="!inStock"
+          :class="{ disabledButton: !inStock }">Add to Cart
+        </button>
+      </div>
+
+    </div>
+  `,
+  data() {
+    return {
+      product: 'Socks',
+      brand: 'Vue Mastery',
+      selectedVariant: 0,
+      details: ["80% cotton", "20% polyester", "Gender-neutral"],
+      variants: [
+        {
+          variantId: 2234,
+          variantColor: "green",
+          variantImage: "./assets/vmSocks-green.jpg",
+          variantQuantity: 10
+        },
+        {
+          variantId: 2235,
+          variantColor: "blue",
+          variantImage: "./assets/vmSocks-blue.jpg",
+          variantQuantity: 0
+        }
+      ]
+    }
+  },
+  methods: {
+    addToCart() {
+      this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+    },
+    updateProduct(index) {
+      this.selectedVariant = index;
+      console.log("index -> " + index);
+    }
+  },
+  computed: {
+    title() {
+      return this.brand + ' ' + this.product;
+    },
+    image() {
+      return this.variants[this.selectedVariant].variantImage;
+    },
+    inStock() {
+      return this.variants[this.selectedVariant].variantQuantity;
+    },
+    shipping() {
+      if(this.premium) {
+        return "Free";
+      }
+      return 2.99;
+    }
+  }
+});
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    premium: true,
+    cart: []
+  },
+  methods: {
+    updateCart(id) {
+      this.cart.push(id);
+    }
+  }
+});
+</syntaxhighlight>
+
+== product-review コンポーネントの追加 ==
+ユーザの入力を受け付けるinput を、product-review コンポーネントとして追加します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
++      <product-review></product-review>
++
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ]
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
++Vue.component('product-review', {
++  template: `
++    <input v-model="name">
++  `,
++  data() {
++    return {
++      name: null
++    }
++  }
++});
++
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+ここで画面を表示してみましょう。すると新しくinput フォームが追加されたことが確認できるはずです。
+
+[[Image:Forms_0001.png]]
+
+Vue dev-tool を開いてinput フォームに値を入力してみましょう。
+するとリアルタイムにdata 内のname が変更されることが確認できます。
+また、dev-tool からname の値を変更すると、画面のフォームの値も変更されます。
+
+-> dev-tool の環境を準備できなかったのでpass
+
+== v-model ディレクティブ ==
+v-model ディレクティブは2 way binding を提供してくれます。
+これは何か新しい値がフォームに入力されたら、その途端にdata が変更されます。<br /><br />
+
+先程<code><input v-model="name"></code> として<code>v-model</code> ディレクティブを追加したのでこれを以下のようにform へ変更します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <product-review></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ]
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+-    <input v-model="name">
++    <form  class="review-form" @submit.prevent="onSubmit">
++      <p>
++        <label for="name">Name:</label>
++        <input id="name" v-model="name" placeholder="name">
++      </p>
++      <p>
++        <label for="review">Review:</label>
++        <textarea id="review" v-model="review"></textarea>
++      </p>
++
++      <p>
++        <label for="rating">Rating:</label>
++        <select id="rating" v-model.number="rating">
++          <option>5</option>
++          <option>4</option>
++          <option>3</option>
++          <option>2</option>
++          <option>1</option>
++        </select>
++      </p>
++
++      <p>
++        <input type="submit" value="Submit">
++      </p>
++    </form>
+   `,
+   data() {
+     return {
+       name: null
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+<code>v-model.number="rating"</code> のような記述をすることでinput の値をinteger 型へ変更するようになります。
+次にdata に<code>review</code>, <code>rating</code> を追加します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+       <product-review></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+       ]
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+     <form  class="review-form" @submit.prevent="onSubmit">
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+-      name: null
++      name: null,
++      review: null,
++      rating: null
+     }
+   }
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+これらのdata の値はそれぞれ<code><input id="name" v-model"name"></code>, <code><textarea id="review" v-model="review"></code>, <code><select id="rating" v-model.number="rating"></code> に渡るようになります。<br /><br />
+
+// vue-dev-tool で確認
+
+[[Image:Forms0002.png]]
+
+== submit イベントを追加する ==
+<code><form class=review-form @submit.prevent="onSubmit"></code> でsubmit イベントを追加しました(<code>.prevent</code> はsubmit 時にページをリフレッシュしないようにするオプション)。これに対応するメソッドを追加します。
+
+* main.js
+<syntaxhighlight lang="diff">
+ Vue.component('product', {
+   props: {
+     premium: {
+       type: Boolean,
+       required: true
+     }
+   },
+   template: `
+     <div class="product">
+
+       <div class="product-image">
+         <img :src="image">
+       </div>
+
+       <div class="product-info">
+         <h1>{{ title }}</h1>
+
+         <p v-if="inStock">In Stock</p>
+         <p v-else>Out of Stock</p>
+         <p>Shipping: {{ shipping }}</p>
+
+         <ul>
+           <li v-for="detail in details">{{ detail }}</li>
+         </ul>
+
+         <div v-for="(variant, index) in variants"
+           class="color-box"
+           :key="variant.variantId"
+           :style="{ backgroundColor: variant.variantColor }"
+           @mouseover="updateProduct(index)">
+         </div>
+
+         <button v-on:click="addToCart"
+           :disabled="!inStock"
+           :class="{ disabledButton: !inStock }">Add to Cart
+         </button>
+       </div>
+
+-      <product-review></product-review>
++      <product-review @review-submitted="addReview"></product-review>
+
+     </div>
+   `,
+   data() {
+     return {
+       product: 'Socks',
+       brand: 'Vue Mastery',
+       selectedVariant: 0,
+       details: ["80% cotton", "20% polyester", "Gender-neutral"],
+       variants: [
+         {
+           variantId: 2234,
+           variantColor: "green",
+           variantImage: "./assets/vmSocks-green.jpg",
+           variantQuantity: 10
+         },
+         {
+           variantId: 2235,
+           variantColor: "blue",
+           variantImage: "./assets/vmSocks-blue.jpg",
+           variantQuantity: 0
+         }
+-      ]
++      ],
++      reviews: []
+     }
+   },
+   methods: {
+     addToCart() {
+       this.$emit('add-to-cart', this.variants[this.selectedVariant].variantId);
+     },
+     updateProduct(index) {
+       this.selectedVariant = index;
+       console.log("index -> " + index);
++    },
++    addReview(productReview) {
++      this.reviews.push(productReview);
++      console.log(this.reviews);
+     }
+   },
+   computed: {
+     title() {
+       return this.brand + ' ' + this.product;
+     },
+     image() {
+       return this.variants[this.selectedVariant].variantImage;
+     },
+     inStock() {
+       return this.variants[this.selectedVariant].variantQuantity;
+     },
+     shipping() {
+       if(this.premium) {
+         return "Free";
+       }
+       return 2.99;
+     }
+   }
+ });
+
+ Vue.component('product-review', {
+   template: `
+-    <form  class="review-form" @submid.prevent="onSubmit">
++    <form  class="review-form" @submit.prevent="onSubmit">
+       <p>
+         <label for="name">Name:</label>
+         <input id="name" v-model="name" placeholder="name">
+       </p>
+       <p>
+         <label for="review">Review:</label>
+         <textarea id="review" v-model="review"></textarea>
+       </p>
+
+       <p>
+         <label for="rating">Rating:</label>
+         <select id="rating" v-model.number="rating">
+           <option>5</option>
+           <option>4</option>
+           <option>3</option>
+           <option>2</option>
+           <option>1</option>
+         </select>
+       </p>
+
+       <p>
+         <input type="submit" value="Submit">
+       </p>
+     </form>
+   `,
+   data() {
+     return {
+       name: null,
+       review: null,
+-      rating: null
++      rating: null,
++    }
++  },
++  methods: {
++    onSubmit() {
++      let productReview = {
++        name: this.name,
++        review: this.review,
++        rating: this.rating
++      }
++      this.$emit('review-submitted', productReview);
++
++      // reset after this form was submitted.
++      this.name = null;
++      this.review = null;
++      this.rating = null;
+     }
+   }
++
+ });
+
+ var app = new Vue({
+   el: '#app',
+   data: {
+     premium: true,
+     cart: []
+   },
+   methods: {
+     updateCart(id) {
+       this.cart.push(id);
+     }
+   }
+ });
+</syntaxhighlight>
+
+画面を更新して値を入力してみましょう。
+
+[[Image:10_Forms0003.png]]
+
+そしてSubmit ボタンを押下するとproduct 配列のにデータが1 件追加されるのが確認できます。
+
+[[Image:10_Forms0004.png]]
+
+== レビューを画面に表示する ==
+TODO:
+
+= 参考 =
+; Forms
+: https://www.vuemastery.com/courses/intro-to-vue-js/forms
+
+
